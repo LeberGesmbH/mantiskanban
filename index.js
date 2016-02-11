@@ -1,6 +1,6 @@
 var LoadingIssuesList = new Array();
 var DebugOn = false;
-
+var $ = jQuery;
 /*! @source http://purl.eligrey.com/github/classList.js/blob/master/classList.js*/
 ;if("document" in self&&!("classList" in document.createElement("_"))){(function(j){"use strict";if(!("Element" in j)){return}var a="classList",f="prototype",m=j.Element[f],b=Object,k=String[f].trim||function(){return this.replace(/^\s+|\s+$/g,"")},c=Array[f].indexOf||function(q){var p=0,o=this.length;for(;p<o;p++){if(p in this&&this[p]===q){return p}}return -1},n=function(o,p){this.name=o;this.code=DOMException[o];this.message=p},g=function(p,o){if(o===""){throw new n("SYNTAX_ERR","An invalid or illegal string was specified")}if(/\s/.test(o)){throw new n("INVALID_CHARACTER_ERR","String contains an invalid character")}return c.call(p,o)},d=function(s){var r=k.call(s.getAttribute("class")||""),q=r?r.split(/\s+/):[],p=0,o=q.length;for(;p<o;p++){this.push(q[p])}this._updateClassName=function(){s.setAttribute("class",this.toString())}},e=d[f]=[],i=function(){return new d(this)};n[f]=Error[f];e.item=function(o){return this[o]||null};e.contains=function(o){o+="";return g(this,o)!==-1};e.add=function(){var s=arguments,r=0,p=s.length,q,o=false;do{q=s[r]+"";if(g(this,q)===-1){this.push(q);o=true}}while(++r<p);if(o){this._updateClassName()}};e.remove=function(){var t=arguments,s=0,p=t.length,r,o=false;do{r=t[s]+"";var q=g(this,r);if(q!==-1){this.splice(q,1);o=true}}while(++s<p);if(o){this._updateClassName()}};e.toggle=function(p,q){p+="";var o=this.contains(p),r=o?q!==true&&"remove":q!==false&&"add";if(r){this[r](p)}return !o};e.toString=function(){return this.join(" ")};if(b.defineProperty){var l={get:i,enumerable:true,configurable:true};try{b.defineProperty(m,a,l)}catch(h){if(h.number===-2146823252){l.enumerable=false;b.defineProperty(m,a,l)}}}else{if(b[f].__defineGetter__){m.__defineGetter__(a,i)}}}(self))};
 
@@ -61,12 +61,6 @@ function window_load() {
 	});
 
 
-	if(DefaultSettings.connectURL != undefined && DefaultSettings.connectURL != "") {
-		document.getElementById("mantisURL").value = DefaultSettings.connectURL;
-	} else if (preConfiguredMantisURL != undefined && preConfiguredMantisURL != "") {
-		document.getElementById("mantisURL").value = preConfiguredMantisURL;
-	}
-
 	//make sure that the username and password form doesnt actually submit. 
 	//need this here as a fail safe because jQuery is included.
 	$('#userLoginForm').submit(function() {
@@ -83,7 +77,6 @@ function window_load() {
     });
     
 	AutoLogin();
-
 
 	/*
 	$(document).bind('keyup', 'shift+ctrl+g', function() {
@@ -156,7 +149,6 @@ function Login() {
 	log("Login() called.");
 	
 	document.getElementById("username").focus();
-	Mantis.ConnectURL = document.getElementById("mantisURL").value;
 	
 	try {
 		var retObj = Mantis.Login(document.getElementById("username").value, document.getElementById("password").value);
@@ -172,14 +164,15 @@ function Login() {
 	}
 
 	DefaultSettings.connectURL = Mantis.ConnectURL;
-	saveSettingsToStorageMechanism();
 
 	StartLoading();
 	
 	//put the user-entered data into the DefaultSettings array.
 	DefaultSettings.username = document.getElementById("username").value;
+	DefaultSettings.password = document.getElementById("password").value;
 	DefaultSettings.stayLoggedIn = 1;
 	DefaultSettings.lastAccessTime = Math.round(new Date().getTime() / 1000);
+	saveSettingsToStorageMechanism();
 
 	LoadSettingsFromLocalStorage();
 	if(DefaultSettings.kanbanListWidth == undefined) {
@@ -204,6 +197,26 @@ function Login() {
 		document.getElementById("searchfield").value = urlParams.issue;
 		SearchForStory();
 		return;
+	}
+
+	$('#scrumMode').bootstrapSwitch();
+	$('#scrumMode').on('switchChange.bootstrapSwitch', function(event, state) {
+		Kanban.ScrumMode = state ? "Review" : "Planif";
+		SelectProject();
+	});
+
+
+	if (Kanban.Priorities != null) {
+		var priorityList = document.getElementById('prioritylegend');
+		try { while(priorityList.childNodes.length > 0) { priorityList.removeChild(priorityList.firstChild); } } catch(e) {}
+
+		for (var priority in Kanban.Priorities) {
+			var projectDiv = document.createElement("div");
+			projectDiv.innerHTML = priority;
+			projectDiv.setAttribute("priority", Kanban.Priorities[priority].value);
+
+			priorityList.appendChild(projectDiv);
+		}
 	}
 
 	SelectProject();
@@ -245,7 +258,7 @@ function ShowLoginArea() {
 }
 
 function ShowProjectArea() {
-	document.getElementById("projectarea").style.display = "inline-block";
+	document.getElementById("projectarea").style.display = "block";
 	document.getElementById("contentarea").style.display = "block";
 	document.getElementById("priorities-displayer").style.display = "block";
 	
@@ -400,6 +413,7 @@ function SelectProject(openStoryID) {
 	Kanban.Lists = [];
 	Kanban.Stories = [];
 	Kanban.AssignedUsers = [];
+	Kanban.AssignedUsersSelected = [];
 	var assignedUserContainer = document.getElementById("project-users-gravatars-container");
 	try {
 		while(assignedUserContainer.childNodes.length > 0) {
@@ -429,7 +443,7 @@ function SelectProject(openStoryID) {
 
 	if(Mantis.DefaultFilterID !== null && Mantis.DefaultFilterID != 0) {
 		window.setTimeout(function(filterID, retObj) {
-			LoadFilterAsync(Mantis.DefaultFilterID, 0, 0, function(filterID, retObj) {
+			LoadFilterAsync(Mantis.DefaultFilterID, 0, Mantis.NumberOfIssueToLoad, function(filterID, retObj) {
 				DoneLoadingIssuesCallback(filterID, retObj);
 				if(document.getElementById("searchfield").value != "") {
 					SearchForStory(false);
@@ -443,7 +457,7 @@ function SelectProject(openStoryID) {
 			window.setTimeout("LoadFilterAsync(Mantis.ClosedIssuesFilterID, 1, Kanban.NumberOfClosedMessagesToLoad, DoneLoadingIssuesCallback)", 10);
 		}
 	} else {
-		var retObj = Mantis.ProjectGetIssues(Mantis.CurrentProjectID, 0, 0);
+		var retObj = Mantis.ProjectGetIssues(Mantis.CurrentProjectID, 0, Mantis.NumberOfIssueToLoad);
 		CreateKanbanStoriesFromMantisIssues(retObj);
 		CreateListOfAssignedStories();
 		BuildKanbanAssignedUsersGUI();		
@@ -475,8 +489,50 @@ function VerifyDefaultFitlers() {
 }
 
 function UpdateFilter(filterID) {
-	Mantis.DefaultFilterID = filterID;
+	for(var i = 0; i < Mantis.ProjectFilterList.length; i++) {
+		console.log(Mantis.ProjectFilterList[i].id, filterID);
+		if (Mantis.ProjectFilterList[i].id == filterID) {
+			$('#selectedFilterText').text(Mantis.ProjectFilterList[i].name);
+			Mantis.DefaultFilterID = filterID;
+			SelectProject();
+			return;
+		}
+	}
+
+	$('#selectedFilterText').text("Select Filter");
+	Mantis.DefaultFilterID = null;
 	SelectProject();
+}
+
+function Refresh(refreshTime) {
+	DefaultSettings.refresh = refreshTime;
+	saveSettingsToStorageMechanism();
+
+	UpdateRefreshDisplay();
+
+	SelectProject();
+}
+
+function RefreshDisplay() {
+	var editing = document.getElementById("kanbancontent").getAttribute("editing");
+	console.log("editing", editing);
+
+	if (editing != "true") {
+		SelectProject();
+	}
+}
+
+function UpdateRefreshDisplay() {
+	if (DefaultSettings.refresh > 0) {
+		$('#selected-refresh').text((DefaultSettings.refresh / 60) + " minute" + (((DefaultSettings.refresh / 60) > 1) ? "s" : ""));
+
+		if (Kanban.refreshInterval != null) {
+			clearInterval(Kanban.refreshInterval);
+		}
+		Kanban.refreshInterval = setInterval("RefreshDisplay();", DefaultSettings.refresh * 1000);
+	} else {
+		$('#selected-refresh').text("No");
+	}
 }
 
 function UpdateFilterList() {
@@ -484,15 +540,16 @@ function UpdateFilterList() {
 	log("UpdateFilterList() called.");
 
 	var filterList = document.getElementById("filterlist");
+
 	var filterListArray = Mantis.FilterGet(Mantis.CurrentProjectID)
 	Mantis.ProjectFilterList = filterListArray;
 
 	while(filterList.children.length > 0) { 
 	 	filterList.removeChild(filterList.children[0]);
-	} 
+	}
+	filterList.innerHTML = "<li><a href=\"#\" onclick=\"UpdateFilter(0);\">Clear filter</a></li><li role=\"separator\" class=\"divider\"></li>";
 
 	for(var i = 0; i < filterListArray.length; i++) {
-	
 		var filter = filterListArray[i];
 
 		var filterItem = document.createElement("li");
@@ -507,6 +564,10 @@ function UpdateFilterList() {
 
 		filterList.appendChild(filterItem);
 
+		// Update selected filter
+		if (filter.id == Mantis.DefaultFilterID) {
+			$('#selectedFilterText').text(filter.name);
+		}
 	}
 }
 
@@ -521,7 +582,7 @@ function LoadFilterAsync(FilterID, Page, Limit, Callback) {
 		} catch (e) {
 			if(Mantis.DefaultFilterID == FilterID) Mantis.DefaultFilterID = null;
 			if(Mantis.ClosedIssuesFilterID == FilterID) Mantis.ClosedIssuesFilterID =  null;
-			saveCurrentSettings();
+			saveSettingsToStorageMechanism();
 			StopLoading();
 			alert("Error Loading Stories For Filter: " + e.message);
 		}
@@ -554,7 +615,7 @@ function StopLoading() {
 function BuildKanbanListFromMantisStatuses() {
 	var hasCutomFieldForStatus = false;
 	Kanban.UsingCustomField = false;
-	if(Mantis.ProjectCustomFields.length > 0) {
+	if (Mantis.ProjectCustomFields.length > 0) {
 		for(var cf = 0; cf < Mantis.ProjectCustomFields.length; cf++) {
 			var customfield = Mantis.ProjectCustomFields[cf]
 			if(customfield.field.name == Kanban._listIDField) {
@@ -565,7 +626,10 @@ function BuildKanbanListFromMantisStatuses() {
 					possiblevalue = possiblevalues[pv];
 					var newKanbanList = new KanbanList(possiblevalue);
 					newKanbanList.UsesCustomField = true;
-					Kanban.AddListToArray(newKanbanList);
+
+					if (Kanban.ScrumModes[Kanban.ScrumMode][newKanbanList.ID]) {
+						Kanban.AddListToArray(newKanbanList);
+					}
 				}
 			}
 		}
@@ -594,20 +658,20 @@ function LoadKanbanProjects() {
 		var parentProject = new KanbanProject(Mantis.UserProjects[i]);
 		Kanban.Projects[Kanban.Projects.length] = parentProject;
 		if(parentProject.ProjectSource.subprojects.length > 0) {
-			AddProjectandSubProjectsToList(parentProject.ProjectSource.subprojects, parentProject);
+			AddProjectandSubProjectsToList(parentProject.ProjectSource.subprojects, parentProject, 1);
 		}
 	}
 }
 
-function AddProjectandSubProjectsToList(projectList, parent) {
+function AddProjectandSubProjectsToList(projectList, parent, niv) {
 	for(var q=0; q < projectList.length; q++) {
 		var subProject = new KanbanProject(projectList[q]);
 		Kanban.Projects[Kanban.Projects.length] = subProject;
 		subProject.ParentProject = parent;
-		subProject.IsSubProject = true;
+		subProject.ProjectNiv = niv;
 		parent.SubProjects[parent.SubProjects.length] = subProject;
 		if(subProject.ProjectSource.subprojects.length > 0) {
-			AddProjectandSubProjectsToList(subProject.ProjectSource.subprojects, subProject);
+			AddProjectandSubProjectsToList(subProject.ProjectSource.subprojects, subProject, niv + 1);
 		}
 	}
 }
@@ -620,8 +684,9 @@ function BuildProjectUI(project, parent, preSelectedProjectID) {
 		projectDiv.setAttribute("href", "");
 		projectDiv.setAttribute("onclick", "document.getElementById('seletedproject').value = '" + project.ID + "'; document.getElementById('searchfield').value = ''; SelectProject(); SwapSelectedProject(this.id); return false;");
 		projectDiv.setAttribute("selected", project.ID == preSelectedProjectID ? "true" : "false");
-		if(project.IsSubProject) {
+		if(project.ProjectNiv > 0) {
 			projectLI.classList.add("subproject");
+			projectLI.classList.add("subprojectNiv" + project.ProjectNiv);
 		}
 		projectDiv.innerHTML = project.Name;
 		projectLI.appendChild(projectDiv);
@@ -634,11 +699,12 @@ function BuildProjectsGUI() {
 	var projectDivContainer = document.getElementById("projectlist");
 	var preSelectedProjectID = document.getElementById("seletedproject").value == "" ? Kanban.Projects[0].ID : document.getElementById("seletedproject").value;
 	try { while(projectDivContainer.childNodes.length > 0) { projectDivContainer.removeChild(projectDivContainer.firstChild); } } catch(e) { }
+
+	projectDivContainer.innerHTML = "";
+
 	for(var i = 0; i < Kanban.Projects.length; i++) {
-		
 		var thisProject = Kanban.Projects[i];
 		BuildProjectUI(thisProject, projectDivContainer, preSelectedProjectID);
-
 	}
 
 	if(document.getElementById("seletedproject").value == "" || !Kanban.HasProject(document.getElementById("seletedproject").value)) {
@@ -646,34 +712,105 @@ function BuildProjectsGUI() {
 	}
 }
 
+function GetUserColor(digits) {
+	if(digits.length > 3) digits = digits.substring(0, 3)
+	if(digits.length < 3) digits = pad(3, digits, "0");
+
+	var colorObject = GetColorCodeFor3Digits(digits);
+	var textContrast = GetColorContrastForRBG(colorObject.first, colorObject.second, colorObject.third);
+	return "color: " + textContrast + "; background: #" + rgbToHex(colorObject.first, colorObject.second, colorObject.third) + ";";
+}
+
 function BuildKanbanAssignedUsersGUI() {
 	var kanbanUserListContainer = document.getElementById("project-users-gravatars-container");
-	kanbanUserListContainer.innerHTML = "Users:";
+	kanbanUserListContainer.innerHTML = "";
+
+	var labelDiv = document.createElement("div");
+	labelDiv.innerHTML = "Users:";
+	labelDiv.setAttribute("id", "gravatarlabel");
+	kanbanUserListContainer.appendChild(labelDiv);
+
+	var userListDiv = document.createElement("div");
+	userListDiv.setAttribute("id", "gravatarusers");
+	kanbanUserListContainer.appendChild(userListDiv);
+
+	var thisUser = Kanban.AssignedUsers[kbu];
+	var userGravatar = document.createElement("div");
+	userGravatar.innerHTML = "X";
+	userGravatar.setAttribute("class", "gravatarcontainer userlistgravataritems");
+	userGravatar.setAttribute("style", "color: #fff; background: #e77; text-align:center; padding-top:5px; vertical-align:middle;");
+
+	userGravatar.setAttribute("data-toggle", "tooltip");
+	userGravatar.setAttribute("data-placement", "bottom");
+	userGravatar.setAttribute("data-trigger", "hover");
+	userGravatar.setAttribute("data-html", "true");
+
+	userGravatar.setAttribute("title", "Nobody");
+	userGravatar.setAttribute("data-content", "");
+	userGravatar.setAttribute("id", "ug");
+
+	userListDiv.appendChild(userGravatar);
 
 	for(var kbu = 0; kbu < Kanban.AssignedUsers.length; kbu++) {
 		var thisUser = Kanban.AssignedUsers[kbu];
-		var userGravatar = document.createElement("a");
+
+		var userGravatar = document.createElement("div");
+		var shortName = thisUser.Name.substring(0, 1).toUpperCase() + thisUser.Name.substring(1, 2);
+		//userGravatar.innerHTML = shortName;
+
 		userGravatar.setAttribute("class", "gravatarcontainer userlistgravataritems");
-		userGravatar.style.backgroundImage = "url(" + get_gravatar_image_url (thisUser.Email, 30) + ")";
+		
+		userGravatar.setAttribute("style", GetUserColor(thisUser.UserName.substring(0, 3)) + " text-align:center; padding-top:5px; vertical-align:middle;");
+
 		//userGravatar.setAttribute("data-container", "body");
 		userGravatar.setAttribute("data-toggle", "tooltip");
 		userGravatar.setAttribute("data-placement", "bottom");
 		userGravatar.setAttribute("data-trigger", "hover");
-		userGravatar.setAttribute("data-html", "true");
-
+		userGravatar.setAttribute("data-html", "true");		
+		userGravatar.style.backgroundImage = "url(" + get_gravatar_image_url (thisUser.Email, 30) + ")";
 		//userGravatar.setAttribute("data-content", thisUser.Email);
 		//userGravatar.setAttribute("data-trigger", "hover");
 		userGravatar.setAttribute("title", thisUser.Name);
-		userGravatar.setAttribute("data-content", "<b>" + thisUser.Email + "</b><div style=\"color:#000 !important; border: solid 1px #bbb; padding-left: 5px;" + GetStyleCodeFor3DigitsHalfShaded(thisUser.UserName.substring(0, 3)) + "\">" + thisUser.UserName.substring(0, 1).toUpperCase() + thisUser.UserName.substring(1, 2) + "</div>");
+		userGravatar.setAttribute("data-content", "<b>" + thisUser.Email + "</b><div style=\"color:#000 !important; border: solid 1px #bbb; padding-left: 5px;" + GetStyleCodeFor3DigitsHalfShaded(thisUser.UserName.substring(0, 3)) + "\">" + shortName + "</div>");
 		userGravatar.setAttribute("id", "ug" + thisUser.ID);
 
 		kanbanUserListContainer.appendChild(userGravatar);
 
 	}
 
+	$(".userlistgravataritems").click(function() {
+		var id = $(this).attr("id").substr(2);
+
+		if (!$(this).hasClass("selected")) {
+			$(this).addClass("selected");
+			$(this).css( "outline", "medium solid #dd2222" );
+			Kanban.AssignedUsersSelected.push(id);
+		} else {
+			$(this).removeClass("selected");
+			$(this).css( "outline", "" );
+
+			var index = Kanban.AssignedUsersSelected.indexOf(id);
+			if (index > -1) {
+				Kanban.AssignedUsersSelected.splice(index, 1);
+			}
+		}
+
+		RefreshStoriesDisplay();
+	});
+
 	$(function () { 
     	$("[data-toggle='tooltip']").popover({html:true}); 
 	});
+}
+
+function RefreshStoriesDisplay() {
+	for(var si = 0; si < Kanban.Stories.length; si++) {
+		var story = Kanban.Stories[si];
+
+		story.Element.style.display = ((Kanban.AssignedUsersSelected.indexOf(story.HandlerID) > -1) || (Kanban.AssignedUsersSelected.length == 0)) ? 'block' : 'none';
+	}
+
+	UpdateKanbanListTitle();
 }
 
 function SelectFirstMantisProjectUserAccessAccessTo(obj, doc) {
@@ -701,6 +838,17 @@ function CreateListOfAssignedStories() {
 
 		}
 	}
+	Kanban.AssignedUsers.sort(compareUsers);
+}
+
+function compareUsers(a, b) {
+	if (a.Name < b.Name) {
+		return -1;
+	}
+	if (a.Name > b.Name) {
+		return 1;
+	}
+	return 0;
 }
 
 function CreateKanbanStoriesFromMantisIssues(obj) {
@@ -709,16 +857,21 @@ function CreateKanbanStoriesFromMantisIssues(obj) {
 		Kanban.AddStoryToArray(newStory);
 	}
 
-	
+	UpdateKanbanListTitle();
 }
+
 function AutoLogin(){
 	//use this function to check to see if the user has local storage for username and password and if they do log in automatically
 	if (Modernizr.localstorage) {
   		log("window.localStorage is available!");
   		LoadSettingsFromLocalStorage();
+
+		if (document.getElementById("password").value != "") {
+			Login();
+		}
 	}
 	else {
-  		log("no native support for HTML5 storage :( maybe try dojox.storage or a third-party solution");
+		log("no native support for HTML5 storage :( maybe try dojox.storage or a third-party solution");
   		LoadSettingsFromCookieStorage();
 	}
 }
@@ -741,19 +894,25 @@ function LoadSettingsFromLocalStorage(){
 		DefaultSettings = JSON.parse(localStorage.mantiskanbanSettings);
 		log("loaded user saved settings into the DefaultSettings");
 		log(JSON.stringify(DefaultSettings));
-		//put the username in the field if the DefaultSettings.lastAccessTime is less than 30 days ago
-		var currentTime = Math.round(new Date().getTime() / 1000);
-		if(((currentTime - DefaultSettings.lastAccessTime) < 2592000) && DefaultSettings.stayLoggedIn == 1){
-			log("user logged in less than 30 days ago put their name in the box");
-			document.getElementById("username").value = DefaultSettings.username;
-			document.getElementById("password").value = "";
-		}
+
 		//if the current project in the settings is not the same as the project default then load it.
 		if(DefaultSettings.currentProject != Mantis.CurrentProjectID){
 			log("setting user-saved filter as default project: " + DefaultSettings.currentProject);
 			Mantis.CurrentProjectID = DefaultSettings.currentProject;
 			document.getElementById("seletedproject").value = Mantis.CurrentProjectID;
 			log("CurrentProjectID set to " + Mantis.CurrentProjectID);
+		}
+
+		if(DefaultSettings.refresh != null){
+			UpdateRefreshDisplay();
+		}
+
+		//put the username in the field if the DefaultSettings.lastAccessTime is less than 30 days ago
+		var currentTime = Math.round(new Date().getTime() / 1000);
+		if(((currentTime - DefaultSettings.lastAccessTime) < 2592000) && DefaultSettings.stayLoggedIn == 1){
+			log("user logged in less than 30 days ago put their name in the box");
+			document.getElementById("username").value = DefaultSettings.username;
+			document.getElementById("password").value = DefaultSettings.password;
 		}
 	}
 	//otherwise load the DefaultSettings
@@ -774,7 +933,7 @@ function saveSettingsToStorageMechanism(){
 	log("saveCurrentSettings() called.");
 	if (Modernizr.localstorage) {
   		localStorage.setItem("mantiskanbanSettings", JSON.stringify(DefaultSettings));
-  		log("local stored settings: " + localStorage.getItem("mantiskanbanSettings"));
+		log("local stored settings: " + localStorage.getItem("mantiskanbanSettings"));
   		log("defaultSettings: " + JSON.stringify(DefaultSettings));
 	}
 	else {

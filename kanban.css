@@ -35,7 +35,7 @@ body {
 }
 
 #project-users-gravatars-container {
-	display: inline;
+	display: block;
 	background: #eeeeee; /* Old browsers */
 	background: -moz-linear-gradient(top, #eeeeee 0%, #cccccc 100%); /* FF3.6+ */
 	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#eeeeee), color-stop(100%,#cccccc)); /* Chrome,Safari4+ */
@@ -44,7 +44,7 @@ body {
 	background: -ms-linear-gradient(top, #eeeeee 0%,#cccccc 100%); /* IE10+ */
 	background: linear-gradient(to bottom, #eeeeee 0%,#cccccc 100%); /* W3C */
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', endColorstr='#cccccc',GradientType=0 ); /* IE6-9 */
-	margin-left: 40px;
+	margin-top: 6px;
 	padding-right: 10px;
 	padding-left: 30px;
 	vertical-align: middle;
@@ -209,7 +209,8 @@ div.notecontainer {
 .otherbuttoncontainer {
 	vertical-align: middle;
 	display: inline;
-	height: 85px;
+	top : 5px;
+    position: absolute;
 }
 .projectlist{
 	display: inline;
@@ -227,13 +228,6 @@ div.notecontainer {
 }
 
 #selected-project-name {
-	color: #FFFFFF;
-	display: inline-block;
-	margin-top: 5px !important;
-	margin-bottom: 3px;
-
-	font-size: 1.75em;
-	font-weight: bold;
 }
 
 .mantislogo{
@@ -281,7 +275,6 @@ div.notecontainer {
 
 .mantislogo.loggedin {
 	width: 210px;
-	margin-left: 30px;
 	display:inline;
 	vertical-align: top;
 	padding-top:2px;
@@ -382,7 +375,7 @@ background: none repeat scroll 0% 0% rgba(57, 130, 203, 1);
 	top: 0px;
 	display:none;
 	width: 100%;
-	height: calc(100% - 85px); 
+	height: calc(100% - 85px);
 	border-bottom: 1px solid #000000;
 	background-color: #cacacf;
 	white-space: nowrap;
@@ -395,7 +388,6 @@ background: none repeat scroll 0% 0% rgba(57, 130, 203, 1);
 
 .headerarea{
 	/*background: #666c70;*/
-	height: 85px;
 	width:100%;
 	background: #565656;
 }
@@ -718,32 +710,30 @@ background: none repeat scroll 0% 0% rgba(57, 130, 203, 1);
 	border-bottom-right-radius: 10px;	
 }
 
-/* ------ priority color css start -------- */
-div[priority="none"], div[priority="無"] {
+div[priority="none"] {
 	background-color: #104E8B;
 	color:#FFFFFF;
 }
-div[priority="low"], div[priority="低"] {
+div[priority="low"] {
 	background-color: #74BBFB;
 	color:#343434;
 }
-div[priority="normal"], div[priority="一般"] {
+div[priority="normal"] {
 	background-color: #cdcdcd;
 	color:#000000;
 }
-div[priority="high"], div[priority="高"] {
+div[priority="high"] {
 	background-color: #CCEB05;
 	color:#343434;
 }
-div[priority="urgent"], div[priority="緊急"] {
+div[priority="urgent"] {
 	background-color: #FF6600;
 	color:#FFFFFF;
 }
-div[priority="immediate"], div[priority="馬上"] {
+div[priority="immediate"] {
 	background-color: #fe0000;
 	color:#FFFFFF;
 }
-/* ----- priority color css ends --------- */
 
 #prioritylegend>div[priority="immediate"] {
 	border-top-left-radius: 10px;
@@ -915,4 +905,100 @@ div[priority="immediate"], div[priority="馬上"] {
     -webkit-animation-direction: reverse;
     animation-name: reveal;
     animation-direction: reverse; /* thx @HugoGiraudel */
+}
+
+
+/* Ajouts e-doceo */
+
+.rightButtons {
+    position: absolute;
+    right: 50px;
+    top: 5px;
+    z-index: 150;
+}
+
+.rightButtons2 {
+    position: absolute;
+    right: 50px;
+    top: 45px;
+    z-index: 100;
+}
+
+.btn_large {
+    width: 100%;
+}
+
+.btn_mid_large {
+    width: 50%;
+}
+
+.btn_delete {
+    width: 100%;
+    margin-top: 15px;
+}
+
+
+.subprojectNiv1 {
+    margin-left: 20px;
+}
+.subprojectNiv2 {
+    margin-left: 40px;
+}
+.subprojectNiv3 {
+    margin-left: 60px;
+}
+.subprojectNiv4 {
+    margin-left: 80px;
+}
+.subprojectNiv5 {
+    margin-left: 100px;
+}
+.subprojectNiv6 {
+    margin-left: 120px;
+}
+.subprojectNiv7 {
+    margin-left: 140px;
+}
+.subprojectNiv8 {
+    margin-left: 160px;
+}
+
+#projectarea {
+    display: block;
+}
+
+#projectareabuttons {
+    display: inline-block;
+}
+
+.otherbuttoncontainer {
+    position: relative;
+}
+
+#project-users-gravatars-container {
+    display: inline-block;
+    padding-right: 15px;
+}
+
+#gravatarlabel {
+    display: inline-block;
+    width: 55px;
+    vertical-align: top;
+    margin-top: 4px;
+}
+
+#gravatarusers {
+    display: inline-block;
+    max-width: calc(100% - 55px);
+}
+
+
+.scrollable-menu {
+    height: auto;
+    max-height: 90vh;
+    overflow-x: hidden;
+}
+
+.chargeRestanteTicket {
+	font-weight: bold;
 }
